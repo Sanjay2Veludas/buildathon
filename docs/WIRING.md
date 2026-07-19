@@ -8,28 +8,47 @@ This document matches the active implementation in:
 
 ## 1) Pin map used by firmware
 
-### Sound sensors (fixed base)
-- `A0` -> Sensor S0 (0°)
-- `A1` -> Sensor S1 (120°)
-- `A2` -> Sensor S2 (240°)
-- Sensor power: **3.3V + GND** (common ground)
+### Sound sensors — passive condenser mic bias circuit
+One circuit per mic, built on breadboard. Wire the output to A0 / A1 / A2.
+
+```
+3.3V ──┬── 330K ──┬── 330K ── GND
+       │          │
+      n/a       22nF (DC block)
+                  │
+                6.8K ── mic(+)
+                          mic(–) ── GND
+                  │
+                470pF ── GND
+                  │
+               A0 / A1 / A2
+```
+
+| Pin | Mic / bearing |
+|-----|---------------|
+| `A0` | Mic S0 — 0° |
+| `A1` | Mic S1 — 120° |
+| `A2` | Mic S2 — 240° |
+
+- Mic power: **3.3V + GND** shared rail on breadboard
+- Twist the two mic leads when extending with jumper wires to reduce noise pickup
+- Do not run mic leads parallel to motor wires
 
 ### Stepper driver pins
-The code supports two profiles; selected in `mcu/main.ino`:
-- `STEPPER_USE_STEP_DIR = true` (default)
+Profile selected in `mcu/main.ino` via `STEPPER_USE_STEP_DIR`.
 
-#### STEP/DIR profile (default)
-- `D2` -> STEP
-- `D3` -> DIR
-- `D4` -> EN (optional, active-low assumed)
-- Driver VMOT -> battery motor rail
-- Driver logic -> 3.3V compatible
-
-#### ULN2003 profile (optional)
+#### ULN2003 profile — **active** (`STEPPER_USE_STEP_DIR = false`, 28BYJ-48)
 - `D2` -> IN1
 - `D3` -> IN2
 - `D4` -> IN3
 - `D5` -> IN4
+- ULN2003 VCC -> 5V, GND -> GND
+
+#### STEP/DIR profile — inactive (`STEPPER_USE_STEP_DIR = true`)
+- `D2` -> STEP
+- `D3` -> DIR
+- `D4` -> EN (active-low)
+- Driver VMOT -> motor power rail
 
 ### LEDs
 - `D6` -> RED1
