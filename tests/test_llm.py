@@ -10,7 +10,7 @@ def main() -> int:
         print('FAIL: GEMINI_API_KEY not set')
         return 1
 
-    model = 'gemini-2.0-flash'
+    model = 'gemini-3.1-flash-lite'
     url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
     headers = {
         'x-goog-api-key': key,
