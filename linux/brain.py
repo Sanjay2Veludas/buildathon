@@ -4,9 +4,11 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import requests
+
+_GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 @dataclass
@@ -23,16 +25,30 @@ def _read_b64(path: str) -> str:
         return base64.b64encode(f.read()).decode("ascii")
 
 
+def _api_headers() -> Dict[str, str]:
+    return {
+        "x-goog-api-key": os.getenv("GEMINI_API_KEY", ""),
+        "content-type": "application/json",
+    }
+
+
+def _endpoint(model: str) -> str:
+    return f"{_GEMINI_BASE}/{model}:generateContent"
+
+
+def _extract_text(response_json: Dict[str, Any]) -> str:
+    candidates = response_json.get("candidates", [])
+    if not candidates:
+        return ""
+    parts = candidates[0].get("content", {}).get("parts", [])
+    return "\n".join(p.get("text", "") for p in parts if "text" in p).strip()
+
+
 def _strip_json_fences(text: str) -> str:
     cleaned = text.strip()
     cleaned = re.sub(r"^```(?:json)?", "", cleaned)
     cleaned = re.sub(r"```$", "", cleaned)
     return cleaned.strip()
-
-
-def _parse_response_text(text: str) -> Dict[str, Any]:
-    payload = _strip_json_fences(text)
-    return json.loads(payload)
 
 
 def _fallback_unavailable() -> BrainResult:
@@ -45,68 +61,51 @@ def _fallback_unavailable() -> BrainResult:
     )
 
 
-def _api_headers() -> Dict[str, str]:
-    return {
-        "x-api-key": os.getenv("ANTHROPIC_API_KEY", ""),
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-
-
 def transcribe_audio(audio_path: str, model: str, timeout_s: int) -> str:
-    """Send a WAV file to Claude and return a transcription or sound description.
+    """Send a WAV file to Gemini and return a transcription or sound description.
 
     Returns an empty string on any failure so callers can proceed without audio context.
     """
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key or not os.path.exists(audio_path):
         return ""
 
     body = {
-        "model": model,
-        "max_tokens": 200,
-        "messages": [{
-            "role": "user",
-            "content": [
+        "contents": [{
+            "parts": [
                 {
-                    "type": "document",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "audio/wav",
+                    "inline_data": {
+                        "mime_type": "audio/wav",
                         "data": _read_b64(audio_path),
-                    },
+                    }
                 },
                 {
-                    "type": "text",
                     "text": (
                         "Transcribe this audio. If speech is present, return the exact words. "
                         "If no speech, describe the sounds heard (e.g. 'loud bang', 'glass breaking', "
                         "'footsteps on hard floor'). Return only the transcription or sound description, nothing else."
-                    ),
+                    )
                 },
-            ],
+            ]
         }],
     }
 
     try:
         resp = requests.post(
-            "https://api.anthropic.com/v1/messages",
+            _endpoint(model),
             headers=_api_headers(),
             data=json.dumps(body),
             timeout=timeout_s,
         )
         if resp.status_code != 200:
             return ""
-        data = resp.json()
-        blocks = data.get("content", [])
-        parts = [b.get("text", "") for b in blocks if b.get("type") == "text"]
-        return "\n".join(parts).strip()
+        return _extract_text(resp.json())
     except Exception:
         return ""
 
 
 def analyze_event(
-    images: list[str],
+    images: List[str],
     transcription: str,
     model: str,
     timeout_s: int,
@@ -114,21 +113,19 @@ def analyze_event(
     temperature: float,
     retry_count: int,
 ) -> BrainResult:
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         return _fallback_unavailable()
 
-    image_blocks = []
+    parts: List[Dict[str, Any]] = []
     for path in images[:2]:
         if not os.path.exists(path):
             continue
-        image_blocks.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": "image/jpeg",
+        parts.append({
+            "inline_data": {
+                "mime_type": "image/jpeg",
                 "data": _read_b64(path),
-            },
+            }
         })
 
     audio_context = transcription if transcription else "No audio transcription available."
@@ -140,21 +137,21 @@ def analyze_event(
         "Note: audio was captured at event time; images were captured after the turret repositioned. "
         f"Audio transcription: {audio_context}"
     )
-
-    content = image_blocks + [{"type": "text", "text": prompt}]
+    parts.append({"text": prompt})
 
     body = {
-        "model": model,
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-        "messages": [{"role": "user", "content": content}],
+        "contents": [{"parts": parts}],
+        "generationConfig": {
+            "maxOutputTokens": max_tokens,
+            "temperature": temperature,
+        },
     }
 
     attempts = retry_count + 1
     for _ in range(attempts):
         try:
             resp = requests.post(
-                "https://api.anthropic.com/v1/messages",
+                _endpoint(model),
                 headers=_api_headers(),
                 data=json.dumps(body),
                 timeout=timeout_s,
@@ -163,11 +160,8 @@ def analyze_event(
                 time.sleep(0.2)
                 continue
 
-            data = resp.json()
-            blocks = data.get("content", [])
-            text_parts = [b.get("text", "") for b in blocks if b.get("type") == "text"]
-            joined = "\n".join(text_parts)
-            parsed = _parse_response_text(joined)
+            text = _extract_text(resp.json())
+            parsed = json.loads(_strip_json_fences(text))
 
             event_type = str(parsed.get("event_type", "unknown"))
             severity = str(parsed.get("severity", "notable"))

@@ -16,7 +16,7 @@ This guide is aligned to the **current merged codebase** on branch `abhijith`.
 - Install system tools:
   - `espeak-ng`, `alsa-utils`, `v4l-utils`, `usbutils`
 - Export API key:
-  - `export ANTHROPIC_API_KEY="..."`
+  - `export GEMINI_API_KEY="..."`
 - Confirm board enumerates on serial (`/dev/ttyACM0` expected).
 
 ---

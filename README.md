@@ -150,7 +150,7 @@ pip3 install -r linux/requirements.txt
 - Charge battery pack fully.
 - Verify camera and speaker enumerate via `lsusb`.
 - Export API key:
-  - `export ANTHROPIC_API_KEY=...`
+  - `export GEMINI_API_KEY=...`
 - Tune threshold in-room (`trigger_threshold` in `linux/config.yaml` and runtime command support).
 - Rehearse 3 event classes and LED/LCD transitions.
 - Keep spare OTG hub/cable ready.

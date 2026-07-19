@@ -35,15 +35,15 @@ audio:
   tts_cache_dir: ./linux/cache_tts
 
 brain:
-  provider: anthropic
-  model: claude-3-5-sonnet-latest
+  provider: google
+  model: gemini-2.0-flash
   timeout_s: 10
   max_tokens: 300
   temperature: 0.1
   retry_count: 1
 
 network:
-  check_host: api.anthropic.com
+  check_host: generativelanguage.googleapis.com
   check_port: 443
   check_timeout_s: 2
 

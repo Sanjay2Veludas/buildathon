@@ -1,27 +1,28 @@
 #!/usr/bin/env python3
+import json
 import os
 import requests
 
 
 def main() -> int:
-    key = os.getenv('ANTHROPIC_API_KEY', '')
+    key = os.getenv('GEMINI_API_KEY', '')
     if not key:
-      print('FAIL: ANTHROPIC_API_KEY not set')
-      return 1
+        print('FAIL: GEMINI_API_KEY not set')
+        return 1
 
+    model = 'gemini-2.0-flash'
+    url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
     headers = {
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
+        'x-goog-api-key': key,
         'content-type': 'application/json',
     }
     payload = {
-        'model': 'claude-3-5-sonnet-latest',
-        'max_tokens': 64,
-        'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': 'Return exactly {"ok":true}'}]}],
+        'contents': [{'parts': [{'text': 'Return exactly {"ok":true}'}]}],
+        'generationConfig': {'maxOutputTokens': 64},
     }
 
     try:
-        resp = requests.post('https://api.anthropic.com/v1/messages', headers=headers, json=payload, timeout=10)
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
     except Exception as e:
         print('FAIL:', e)
         return 1
