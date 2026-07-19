@@ -1,0 +1,77 @@
+# Audio-Localizing AI Monitor - Runtime Configuration
+# Copy to 'config.yaml' in the linux/ directory and edit for your setup
+
+# ============================================================================
+# SENSOR CONFIGURATION
+# ============================================================================
+sensor_bearings: [0, 120, 240]  # degrees, 120° apart (3x microphones)
+
+# ============================================================================
+# TURRET (STEPPER MOTOR)
+# ============================================================================
+turret_min_deg: -180
+turret_max_deg: 180
+turret_home_deg: 0
+
+# ============================================================================
+# AUDIO THRESHOLDS
+# ============================================================================
+threshold_offset_default: 100    # ADC units above baseline
+threshold_offset_demo: 50        # lower = more sensitive, demo mode
+
+# ============================================================================
+# TIMEOUTS (seconds)
+# ============================================================================
+llm_timeout_sec: 10
+audio_capture_sec: 3
+motion_timeout_sec: 5
+
+# ============================================================================
+# OPERATIONAL FLAGS
+# ============================================================================
+demo_mode: true                  # lower thresholds, faster fallbacks
+offline_mode: false              # use canned responses only (no LLM)
+allow_motion_during_capture: true
+serial_debug: true
+
+# ============================================================================
+# RPC BRIDGE (MCU COMMUNICATION)
+# ============================================================================
+mcu_serial_port: "/dev/ttyACM0"  # Linux: /dev/ttyACM0 or /dev/ttyUSB0
+                                  # Windows: COM3, COM4, etc.
+mcu_baudrate: 115200
+
+# ============================================================================
+# CLOUD API
+# ============================================================================
+# Set ANTHROPIC_API_KEY environment variable:
+#   export ANTHROPIC_API_KEY="sk-ant-..."
+llm_model: "claude-3-5-sonnet-20241022"
+
+# ============================================================================
+# TEXT-TO-SPEECH
+# ============================================================================
+tts_engine: "espeak-ng"   # or "cloud_polly", "cloud_gcloud"
+tts_voice: "en+m2"        # espeak voice; list: espeak-ng --voices
+tts_cached_dir: "./audio_cache"
+
+# ============================================================================
+# CANNED RESPONSES (Offline Fallback)
+# ============================================================================
+canned_responses:
+  startup: "System armed and listening"
+  event_detected: "Interesting event detected"
+  analyzing: "Analyzing..."
+  glass_break: "Glass breaking detected"
+  clapping: "Applause detected"
+  dog_bark: "Dog barking detected"
+  unknown: "Heard something interesting"
+  error: "System error"
+
+# ============================================================================
+# PATHS
+# ============================================================================
+data_dir: "./data"
+log_dir: "./logs"
+photo_dir: "./logs/photos"
+audio_dir: "./logs/audio"
