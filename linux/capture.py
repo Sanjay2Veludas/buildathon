@@ -1,17 +1,9 @@
 import os
 import subprocess
 import time
-from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
-
-
-@dataclass
-class CaptureResult:
-    images: list[str]
-    audio_path: str
-    ok: bool
 
 
 def _timestamp_tag() -> str:
@@ -46,7 +38,11 @@ def capture_photos(camera_index: int, out_dir: str, count: int, width: int, heig
     return paths
 
 
-def record_audio_3s(out_dir: str, seconds: int, input_device_hint: str) -> str:
+def record_audio(out_dir: str, seconds: int, input_device_hint: str) -> str:
+    """Record audio via arecord and return the path to the WAV file.
+
+    Safe to call from a background thread — does not touch the serial bridge.
+    """
     _ensure_dir(out_dir)
     stamp = _timestamp_tag()
     wav_path = os.path.join(out_dir, f"{stamp}_audio.wav")
@@ -66,24 +62,3 @@ def record_audio_3s(out_dir: str, seconds: int, input_device_hint: str) -> str:
 
     subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     return wav_path
-
-
-def capture_bundle(camera_index: int,
-                   artifacts_dir: str,
-                   image_count: int,
-                   image_width: int,
-                   image_height: int,
-                   image_gap_ms: int,
-                   audio_seconds: int,
-                   input_device_hint: str) -> CaptureResult:
-    images = capture_photos(
-        camera_index=camera_index,
-        out_dir=artifacts_dir,
-        count=image_count,
-        width=image_width,
-        height=image_height,
-        gap_ms=image_gap_ms,
-    )
-    audio_path = record_audio_3s(out_dir=artifacts_dir, seconds=audio_seconds, input_device_hint=input_device_hint)
-
-    return CaptureResult(images=images, audio_path=audio_path, ok=(len(images) > 0 and os.path.exists(audio_path)))

@@ -45,9 +45,69 @@ def _fallback_unavailable() -> BrainResult:
     )
 
 
+def _api_headers() -> Dict[str, str]:
+    return {
+        "x-api-key": os.getenv("ANTHROPIC_API_KEY", ""),
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+
+
+def transcribe_audio(audio_path: str, model: str, timeout_s: int) -> str:
+    """Send a WAV file to Claude and return a transcription or sound description.
+
+    Returns an empty string on any failure so callers can proceed without audio context.
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key or not os.path.exists(audio_path):
+        return ""
+
+    body = {
+        "model": model,
+        "max_tokens": 200,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "document",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "audio/wav",
+                        "data": _read_b64(audio_path),
+                    },
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        "Transcribe this audio. If speech is present, return the exact words. "
+                        "If no speech, describe the sounds heard (e.g. 'loud bang', 'glass breaking', "
+                        "'footsteps on hard floor'). Return only the transcription or sound description, nothing else."
+                    ),
+                },
+            ],
+        }],
+    }
+
+    try:
+        resp = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=_api_headers(),
+            data=json.dumps(body),
+            timeout=timeout_s,
+        )
+        if resp.status_code != 200:
+            return ""
+        data = resp.json()
+        blocks = data.get("content", [])
+        parts = [b.get("text", "") for b in blocks if b.get("type") == "text"]
+        return "\n".join(parts).strip()
+    except Exception:
+        return ""
+
+
 def analyze_event(
     images: list[str],
-    audio_path: str,
+    transcription: str,
     model: str,
     timeout_s: int,
     max_tokens: int,
@@ -71,17 +131,14 @@ def analyze_event(
             },
         })
 
-    audio_desc = "No audio attached"
-    if os.path.exists(audio_path):
-        audio_desc = f"Audio file path captured on device: {audio_path}"
-
+    audio_context = transcription if transcription else "No audio transcription available."
     prompt = (
         "You are classifying a security-monitor event. "
-        "Return STRICT JSON only with keys: "
-        "event_type, severity, spoken_response, action_tag. "
+        "Return STRICT JSON only with keys: event_type, severity, spoken_response, action_tag. "
         "severity must be one of benign|notable|alert. "
         "spoken_response must be one short sentence. "
-        f"Context: {audio_desc}"
+        "Note: audio was captured at event time; images were captured after the turret repositioned. "
+        f"Audio transcription: {audio_context}"
     )
 
     content = image_blocks + [{"type": "text", "text": prompt}]
@@ -93,18 +150,12 @@ def analyze_event(
         "messages": [{"role": "user", "content": content}],
     }
 
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-
     attempts = retry_count + 1
     for _ in range(attempts):
         try:
             resp = requests.post(
                 "https://api.anthropic.com/v1/messages",
-                headers=headers,
+                headers=_api_headers(),
                 data=json.dumps(body),
                 timeout=timeout_s,
             )

@@ -26,6 +26,8 @@ Hackathon scaffold for **sound -> look -> understand -> act** using:
   - `test_audio_out.py`
   - `test_llm.py`
   - `test_network.py`
+  - `test_mcu.py`
+  - `smoke_test.py`
 
 ---
 
@@ -118,9 +120,14 @@ Python packages:
 - `requests`
 - `pyyaml`
 
-Install:
+Install (quick):
 ```bash
 pip3 install pyserial opencv-python requests pyyaml
+```
+
+Install (pinned from requirements):
+```bash
+pip3 install -r linux/requirements.txt
 ```
 
 ---
@@ -132,6 +139,11 @@ pip3 install pyserial opencv-python requests pyyaml
 - No offline inference path in this MVP.
 
 ---
+
+## Extended docs
+
+- Build execution guide: `BUILD_GUIDE.md`
+- Detailed wiring and power notes: `docs/WIRING.md`
 
 ## Demo-day checklist
 
