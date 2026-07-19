@@ -1,0 +1,53 @@
+demo_mode: true
+online_only: true
+
+serial:
+  port: /dev/ttyACM0
+  baud: 115200
+  timeout_s: 0.2
+
+sensors:
+  bearings_deg: [0, 120, 240]
+  trigger_threshold: 120
+  refractory_ms: 600
+
+turret:
+  min_deg: -180
+  max_deg: 180
+  settle_ms: 300
+  motion_timeout_s: 4.0
+
+capture:
+  camera_index: 0
+  image_count: 2
+  image_width: 1280
+  image_height: 720
+  image_gap_ms: 120
+  audio_seconds: 3
+  artifacts_dir: ./artifacts
+
+audio:
+  input_device_hint: C270
+  output_device_hint: USB
+  tts_engine: espeak-ng
+  tts_rate: 165
+  tts_voice: en
+  tts_cache_dir: ./linux/cache_tts
+
+brain:
+  provider: anthropic
+  model: claude-3-5-sonnet-latest
+  timeout_s: 10
+  max_tokens: 300
+  temperature: 0.1
+  retry_count: 1
+
+network:
+  check_host: api.anthropic.com
+  check_port: 443
+  check_timeout_s: 2
+
+actions:
+  benign_led: event
+  notable_led: alert
+  alert_led: alarm
