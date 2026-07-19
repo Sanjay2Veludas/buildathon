@@ -23,7 +23,7 @@ static const uint8_t PIN_BTN_ARM = 10U;
 static const uint8_t PIN_BTN_RESET = 11U;
 
 static const bool LCD_USE_I2C = true;
-static const bool STEPPER_USE_STEP_DIR = true;
+static const bool STEPPER_USE_STEP_DIR = false;  // 28BYJ-48 + ULN2003
 
 SoundSensors g_sensors(PIN_S0, PIN_S1, PIN_S2);
 Turret g_turret(STEPPER_USE_STEP_DIR ? StepperProfile::STEP_DIR : StepperProfile::ULN2003,
@@ -188,7 +188,7 @@ void setup() {
 
   g_turret.begin();
   g_turret.setLimits(-180.0F, 180.0F);
-  g_turret.setSpeedUs(1000U);
+  g_turret.setSpeedUs(2000U);  // 2ms/half-step — safe for 28BYJ-48 under load
 
   g_sensors.begin();
   g_sensors.setTriggerThreshold(120U);

@@ -10,10 +10,15 @@ enum class StepperProfile : uint8_t {
 
 class Turret {
  public:
-  Turret(StepperProfile profile, uint8_t pin_a, uint8_t pin_b, uint8_t pin_c, uint8_t pin_d)
+  // steps_per_rev: full mechanical steps per output-shaft revolution (before microstep multiply).
+  // microstep: subdivisions per step (8 = half-step, matches ULN2003 sequence length).
+  // 28BYJ-48 + ULN2003: steps_per_rev=512, microstep=8 → 4096 half-steps/rev.
+  // Generic STEP/DIR 1.8° motor at 8x driver microstepping: steps_per_rev=200, microstep=8.
+  Turret(StepperProfile profile, uint8_t pin_a, uint8_t pin_b, uint8_t pin_c, uint8_t pin_d,
+         uint16_t steps_per_rev = 512U, uint8_t microstep = 8U)
       : profile_(profile), pin_a_(pin_a), pin_b_(pin_b), pin_c_(pin_c), pin_d_(pin_d),
         current_deg_(0.0F), target_deg_(0.0F), min_deg_(-180.0F), max_deg_(180.0F),
-        steps_per_rev_(200U), microstep_(8U), current_step_(0L), target_step_(0L),
+        steps_per_rev_(steps_per_rev), microstep_(microstep), current_step_(0L), target_step_(0L),
         moving_(false), move_end_ms_(0U), mute_until_ms_(0U),
         step_interval_us_(1200U), last_step_us_(0U) {}
 
